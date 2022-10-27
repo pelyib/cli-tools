@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO: add local branch removal command [botond.pelyi]
+
 config_file_folder="$(dirname "$0")"
 verbose_mode=false
 action=""
@@ -70,7 +72,7 @@ function help() {
   echo "  -om, --only-master 0|1            works only with [list] command, list only master or not master"
   echo "  -b,  --branch string              works only with [pull] command, branch to pull (default is master)"
   echo "  -r,  --repository-folder string   folder where the project repositories are (default is the PROJECT_ROOT_PATH env variable)"
-  echo "  -c,  --config-file-folder string  folder where the project configuration file is (defailt is the corrent one)"
+  echo "  -c,  --config-file-folder string  folder where the project configuration file is (default is the current one)"
   echo ""
   echo "Commands:"
   echo "  clone  Clone repositories"
