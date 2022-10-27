@@ -8,6 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - [echo](./scripts/echo.sh) and related aliases
 - [composer](./scripts/composer) and [composer2](./scripts/composer2)
-- [gitb](./scripts/gtib)
+- [gitb](./scripts/gitb)
 - [table_printer](./scripts/table_printer.sh)
 - [uuidb](./scripts/uuidb)
