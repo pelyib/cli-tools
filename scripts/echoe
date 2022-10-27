@@ -1,0 +1,5 @@
+#!/bin/zsh
+
+. "${CLI_TOOLS}/scripts/echo.sh"
+
+error $@

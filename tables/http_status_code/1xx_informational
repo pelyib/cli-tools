@@ -1,0 +1,4 @@
+Status code;Description
+100;Continue           
+101;Switching Protocols
+102;Processing (WebDAV)

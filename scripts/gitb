@@ -1,0 +1,174 @@
+#!/bin/bash
+
+config_file_folder="$(dirname "$0")"
+verbose_mode=false
+action=""
+project=""
+branch_for_pull="master"
+pull_only_master=
+target_dir="${PROJECT_ROOT_PATH}/"
+
+POSITIONAL_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  -v)
+    verbose_mode=true
+    shift
+    ;;
+  -r | --repository-folder)
+    target_dir=${2}
+    shift
+    shift
+    ;;
+  -c | --config-file-folder)
+    config_file_folder=${2}
+    shift
+    shift
+    ;;
+  -b | --branch | -b=* | --branch=*)
+    # TODO: remove support of "=" options
+    if [[ ${1} == "-b" || ${1} == "--branch" ]]; then
+      branch_for_pull="${2}"
+      shift
+    else
+      branch_for_pull="${1#*=}"
+    fi
+    shift
+    ;;
+  -om | --only-master)
+    if [[ ${2} == "1" || ${2} == "0" ]]; then
+      pull_only_master=${2}
+      shift
+      shift
+    fi
+    ;;
+  clone | pull | help | ls | list)
+    action=${1}
+    shift
+    ;;
+  *)
+    project=${1}
+    shift
+    ;;
+  esac
+done
+set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
+
+function debug()
+{
+  [[ ${verbose_mode} == true ]] && echod "$@"
+}
+
+function help() {
+  echo ""
+  echo "Usage: gitb COMMAND [project]"
+  echo ""
+  echo "Perform GIT actions on multiple repositories"
+  echo ""
+  echo "Options:"
+  echo "  -v                                verbose mode"
+  echo "  -om, --only-master 0|1            works only with [list] command, list only master or not master"
+  echo "  -b,  --branch string              works only with [pull] command, branch to pull (default is master)"
+  echo "  -r,  --repository-folder string   folder where the project repositories are (default is the PROJECT_ROOT_PATH env variable)"
+  echo "  -c,  --config-file-folder string  folder where the project configuration file is (defailt is the corrent one)"
+  echo ""
+  echo "Commands:"
+  echo "  clone  Clone repositories"
+  echo "  pull   Pull changes if the branch is master"
+  echo "  list   List the repositories with active branch"
+  echo "  help   Print this helper"
+}
+
+function ensure_project() {
+  project="${1}"
+
+  if [[ ! -f ${project_config_file} ]]; then
+    echoe "Project file is missing (${project_config_file}), pls create it"
+    exit 1
+  fi
+}
+
+function clone() {
+  while IFS= read -r repository; do
+    bn=$(basename $repository)
+    filename=${bn%.*}
+
+    cloneInto="${target_dir}${filename}"
+
+    if [[ -d ${cloneInto} ]]; then
+      echoi "already cloned: ${bn}"
+    else
+      echoi "cloning: ${bn}"
+      git clone ${repository} ${cloneInto}
+      echoi "cloning done: ${bn}"
+    fi
+  done <${project_config_file}
+}
+
+function pull() {
+  while IFS= read -r repository; do
+    bn=$(basename $repository)
+    filename=${bn%.*}
+
+    appFolder="${target_dir}${filename}"
+
+    if [[ ! -d ${appFolder} ]]; then
+      echow "${bn} | App is not cloned yet, skipped"
+    elif [[ $(git -C ${appFolder} rev-parse --abbrev-ref HEAD) = "master" ]]; then
+      echoi "${bn} | Branch is master"
+      echoi "${bn} | pulling"
+      git -C ${appFolder} pull | [[ ${verbose_mode} == true ]] > debug
+    else
+      echow "${bn} | Branch is not master, skipped"
+    fi
+  done <${project_config_file}
+}
+
+function list() {
+  while IFS= read -r repository; do
+    bn=$(basename $repository)
+    filename=${bn%.*}
+
+    appFolder="${target_dir}${filename}"
+    if [[ ! -d ${appFolder} ]]; then
+      echow "${bn} | App is not cloned yet, skipped"
+    else
+      branch=$(git -C ${appFolder} rev-parse --abbrev-ref HEAD)
+      if [[ (${branch} == "master" && ${pull_only_master} == "1") || (${branch} != "master" && ${pull_only_master} == "0") || ! ${pull_only_master} ]]; then
+        echoi "App: ${bn}[$(git -C ${appFolder} rev-parse --abbrev-ref HEAD)]"
+      fi
+    fi
+
+  done <${project_config_file}
+}
+
+project_config_file="${config_file_folder}/${project}"
+
+debug "            Command > ${action}"
+debug "            Project > ${project}"
+debug " Config file folder > ${config_file_folder}"
+debug "Project config file > ${project_config_file}"
+debug "         Target DIR > ${target_dir}"
+debug "    Branch for pull > ${branch_for_pull}"
+debug "        Onyl master > ${pull_only_master}"
+
+case "$action" in
+clone)
+  ensure_project ${project}
+  clone
+  ;;
+pull)
+  ensure_project ${project}
+  pull
+  ;;
+list)
+  ensure_project ${project}
+  list
+  ;;
+help)
+  help
+  ;;
+*)
+  help
+  ;;
+esac
