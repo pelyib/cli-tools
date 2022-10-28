@@ -1,20 +1,24 @@
 #!/bin/bash
 
-# TODO: add local branch removal command [botond.pelyi]
-
-config_file_folder="$(dirname "$0")"
+config_file_folder="${HOME}/.config/gitb"
 verbose_mode=false
+show_help=false
 action=""
 project=""
 branch_for_pull="master"
 pull_only_master=
-target_dir="${PROJECT_ROOT_PATH}/"
+branch_delete=false
+target_dir="${PROJECT_ROOT_PATH}"
 
 POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
   case $1 in
   -v)
     verbose_mode=true
+    shift
+    ;;
+  -h | --help | help)
+    show_help=true
     shift
     ;;
   -r | --repository-folder)
@@ -25,6 +29,10 @@ while [[ $# -gt 0 ]]; do
   -c | --config-file-folder)
     config_file_folder=${2}
     shift
+    shift
+    ;;
+  -d | --delete)
+    branch_delete=true
     shift
     ;;
   -b | --branch | -b=* | --branch=*)
@@ -44,7 +52,7 @@ while [[ $# -gt 0 ]]; do
       shift
     fi
     ;;
-  clone | pull | help | ls | list)
+  clone | pull | branch)
     action=${1}
     shift
     ;;
@@ -58,7 +66,13 @@ set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
 function debug()
 {
-  [[ ${verbose_mode} == true ]] && echod "$@"
+  if [ -n "$1" ]
+  then
+      IN="$@"
+  else
+      read IN # This reads a string from stdin and stores it in a variable called IN
+  fi
+  [[ ${verbose_mode} == true ]] && echod "${IN}"
 }
 
 function help() {
@@ -69,16 +83,27 @@ function help() {
   echo ""
   echo "Options:"
   echo "  -v                                verbose mode"
-  echo "  -om, --only-master 0|1            works only with [list] command, list only master or not master"
-  echo "  -b,  --branch string              works only with [pull] command, branch to pull (default is master)"
   echo "  -r,  --repository-folder string   folder where the project repositories are (default is the PROJECT_ROOT_PATH env variable)"
-  echo "  -c,  --config-file-folder string  folder where the project configuration file is (default is the current one)"
+  echo "  -c,  --config-file-folder string  folder where the project configuration file is (default is ~/.config/gitb/)"
+  case "$action" in
+    clone)
+      ;;
+    branch)
+  echo "  -d,  --delete                     Remove local branches, except the default one"
+  echo "  -om, --only-master 0|1            list only master or not master"
+      ;;
+    pull)
+  echo "  -b,  --branch string              branch to pull (default is master)"
+      ;;
+  esac
   echo ""
   echo "Commands:"
-  echo "  clone  Clone repositories"
-  echo "  pull   Pull changes if the branch is master"
-  echo "  list   List the repositories with active branch"
-  echo "  help   Print this helper"
+  echo "  clone   Clone repositories"
+  echo "  branch  Execute commands on local branches"
+  echo "  pull    Pull changes if the branch is master"
+  echo "  help    Print this helper"
+
+  exit 0
 }
 
 function ensure_project() {
@@ -117,9 +142,8 @@ function pull() {
     if [[ ! -d ${appFolder} ]]; then
       echow "${bn} | App is not cloned yet, skipped"
     elif [[ $(git -C ${appFolder} rev-parse --abbrev-ref HEAD) = "master" ]]; then
-      echoi "${bn} | Branch is master"
-      echoi "${bn} | pulling"
-      git -C ${appFolder} pull | [[ ${verbose_mode} == true ]] > debug
+      echoi "${bn} | Branch is master, pulling"
+      git -C ${appFolder} pull | debug "$@"
     else
       echow "${bn} | Branch is not master, skipped"
     fi
@@ -144,6 +168,26 @@ function list() {
   done <${project_config_file}
 }
 
+function branch()
+{
+  if [[ ${branch_delete} == false ]]; then
+    list
+    return
+  fi
+
+  if [[ ${branch_delete} == true ]]; then
+    while IFS= read -r repository; do
+      bn=$(basename $repository)
+      filename=${bn%.*}
+
+      app_folder="${target_dir}${filename}"
+      cd ${app_folder}
+      git_local_branch_removal
+      echoi "${filename} is done"
+    done <${project_config_file}
+  fi
+}
+
 project_config_file="${config_file_folder}/${project}"
 
 debug "            Command > ${action}"
@@ -154,23 +198,22 @@ debug "         Target DIR > ${target_dir}"
 debug "    Branch for pull > ${branch_for_pull}"
 debug "        Onyl master > ${pull_only_master}"
 
+[[ ${show_help} == true ]] && help
+
 case "$action" in
-clone)
-  ensure_project ${project}
-  clone
-  ;;
-pull)
-  ensure_project ${project}
-  pull
-  ;;
-list)
-  ensure_project ${project}
-  list
-  ;;
-help)
-  help
-  ;;
-*)
-  help
-  ;;
+  clone)
+    ensure_project ${project}
+    clone
+    ;;
+  pull)
+    ensure_project ${project}
+    pull
+    ;;
+  branch)
+    ensure_project ${project}
+    branch 
+    ;;
+  *)
+    help
+    ;;
 esac
