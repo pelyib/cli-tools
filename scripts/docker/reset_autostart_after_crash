@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+for i in /var/lib/docker/containers/*/config.v2.json; do
+  touch "$i.new" && getfacl -p "$i" | setfacl --set-file=- "$i.new"
+  cat "$i" | jq -c '.State.Running = false' > "$i.new" && mv -f "$i.new" "$i"
+done
+
