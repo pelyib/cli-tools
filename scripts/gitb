@@ -8,7 +8,7 @@ project=""
 branch_for_pull="master"
 pull_only_master=
 branch_delete=false
-target_dir="${PROJECT_ROOT_PATH}"
+target_dir="${PROJECT_ROOT_PATH}/"
 
 POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
