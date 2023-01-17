@@ -196,7 +196,7 @@ debug " Config file folder > ${config_file_folder}"
 debug "Project config file > ${project_config_file}"
 debug "         Target DIR > ${target_dir}"
 debug "    Branch for pull > ${branch_for_pull}"
-debug "        Onyl master > ${pull_only_master}"
+debug "        Only master > ${pull_only_master}"
 
 [[ ${show_help} == true ]] && help
 
