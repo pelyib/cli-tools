@@ -1,0 +1,29 @@
+#!/usr/bin/env bash -e
+
+# Original source: https://www.restapitutorial.com/httpstatuscodes.html
+
+dir="$(dirname "$0")"
+. "$dir/table_printer.sh"
+
+class="${1:-help}"
+
+case "$class" in
+help)
+  echo "Possible values: info (i), success (s), redirection (r), client_error (ce), server_error (se)"
+  ;;
+(info | i)
+  printTable ';' "$(cat $dir/../tables/http_status_code/1xx_informational)" false false "1xx - Informational"
+  ;;
+(success | s)
+  printTable ';' "$(cat $dir/../tables/http_status_code/2xx_success)" false false "2xx - Success"
+  ;;
+(redirection | r)
+  printTable ';' "$(cat $dir/../tables/http_status_code/3xx_redirection)" false false "3xx - Redirection"
+  ;;
+(client_error | ce)
+  printTable ';' "$(cat $dir/../tables/http_status_code/4xx_client_error)" false false "4xx - Client Error"
+  ;;
+(server_error | se)
+  printTable ';' "$(cat $dir/../tables/http_status_code/5xx_server_error)" false false "5xx - Server Error"
+  ;;
+esac
