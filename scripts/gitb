@@ -7,7 +7,8 @@ command=""
 subcommand=""
 project=""
 shopt -s nullglob
-projects=("${config_file_folder}*")
+projects_list=("${config_file_folder}"*)
+projects="${projects_list[*]}"
 branch_for_pull="master"
 pull_only_master=
 branch_delete=false
@@ -63,11 +64,9 @@ while [[ $# -gt 0 ]]; do
             if [[ ${command} == "project" && ${subcommand} == "" ]]; then
                 subcommand=${1}
             else
-                # Should validate if the project is valid [botond.pelyi] 2023-08-02
-                # if [[ " ${projects[*]} " =~ " ${config_file_folder}${1} " ]]; then
-                #     project=${1}
-                # fi
-                project=${1}
+                if [[ " ${projects} " =~ .*"$1".* ]]; then
+                    project=${1}
+                fi
             fi
 
             shift
