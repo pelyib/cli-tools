@@ -13,6 +13,7 @@ branch_for_pull="master"
 pull_only_master=
 branch_delete=false
 target_dir="${PROJECT_ROOT_PATH}/"
+repo_to_clone=""
 
 POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -66,6 +67,13 @@ while [[ $# -gt 0 ]]; do
             else
                 if [[ " ${projects} " =~ .*"$1".* ]]; then
                     project=${1}
+
+                    # Not sure if this is the correct solution [botond.pelyi]
+                    if [[ ${command} == "clone" ]]; then
+                        subcommand="clone_single"
+                        repo_to_clone=${2}
+                        shift
+                    fi
                 fi
             fi
 
@@ -88,7 +96,7 @@ function debug()
 
 function help() {
     echo ""
-    echo "Usage: gitb COMMAND [project]"
+    echo "Usage: gitb COMMAND [SUBCOMMAND] [project]"
     echo ""
     echo "Perform GIT commands on multiple repositories"
     echo ""
@@ -108,12 +116,14 @@ function help() {
             ;;
     esac
     echo ""
-    echo "Commands:"
     case "$command" in 
         project)
+            echo " Subcommands"
             echo "  ls        List projects"
+            echo "  edit      edit the given project file"
             ;;
         *)
+            echo " Commands"
             echo "  clone     Clone repositories"
             echo "  branch    Execute commands on local branches"
             echo "  pull      Pull changes if the branch is master"
@@ -121,6 +131,10 @@ function help() {
             echo "  help      Print this helper"
             ;;
     esac
+
+    echo ""
+    echo " Examples"
+    echo "  "
 
     exit 0
 }
@@ -134,7 +148,7 @@ function ensure_project() {
     fi
 }
 
-function clone() {
+function clone_project() {
     while IFS= read -r repository; do
         bn=$(basename $repository)
         filename=${bn%.*}
@@ -149,6 +163,31 @@ function clone() {
             echoi "cloning done: ${bn}"
         fi
     done <${project_config_file}
+}
+
+function clone_single() {
+    bn=$(basename $repo_to_clone)
+    filename=${bn%.*}
+
+    cloneInto="${target_dir}${filename}"
+
+    if [[ -d ${cloneInto} ]]; then
+        echoi "already cloned: ${bn}"
+    else
+        echoi "cloning: ${bn}"
+        git clone ${repo_to_clone} ${cloneInto}
+        echoi "cloning done: ${bn}"
+    fi
+
+    while IFS= read -r repository; do
+        if [[ ${repository} == $repo_to_clone ]]; then
+            echoi "${bn} is already in the ${project_config_file}"
+            return
+        fi
+    done <${project_config_file}
+
+    echoi "Adding ${bn} to ${project_config_file}"
+    echo ${repo_to_clone} >> ${project_config_file}
 }
 
 function pull() {
@@ -217,11 +256,17 @@ function project_ls_repos()
     cat ${config_file_folder}${project}
 }
 
+function project_edit()
+{
+    "${EDITOR:-vim}" ${config_file_folder}${project}
+}
+
 project_config_file="${config_file_folder}${project}"
 
 debug "            Command > ${command}"
 debug "         SubCommand > ${subcommand}"
 debug "            Project > ${project}"
+debug "      Repo to clone > ${repo_to_clone}"
 debug "           Projects > ${projects[*]}"
 debug " Config file folder > ${config_file_folder}"
 debug "Project config file > ${project_config_file}"
@@ -234,7 +279,11 @@ debug "        Only master > ${pull_only_master}"
 case "$command" in
     clone)
         ensure_project ${project}
-        clone
+        if [[ ${subcommand} == "clone_single" && -n ${repo_to_clone} ]]; then
+            clone_single
+        else
+            clone_project
+        fi
         ;;
     pull)
         ensure_project ${project}
@@ -252,6 +301,9 @@ case "$command" in
                 else
                     project_ls_repos
                 fi
+                ;;
+            edit)
+                project_edit
                 ;;
             *)
                 help
