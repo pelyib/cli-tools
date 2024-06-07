@@ -191,6 +191,7 @@ function clone_single() {
 }
 
 function pull() {
+    brancesToPull="main master staging"
     while IFS= read -r repository; do
         bn=$(basename $repository)
         filename=${bn%.*}
@@ -199,7 +200,7 @@ function pull() {
 
         if [[ ! -d ${appFolder} ]]; then
             echow "${bn} | App is not cloned yet, skipped"
-        elif [[ $(git -C ${appFolder} rev-parse --abbrev-ref HEAD) = "master" ]]; then
+        elif [[ $(echo "${brancesToPull}" | grep $(git -C ${appFolder} rev-parse --abbrev-ref HEAD) | wc -l) -gt 0 ]]; then
             echoi "${bn} | Branch is master, pulling"
             git -C ${appFolder} pull | debug "$@"
         else
